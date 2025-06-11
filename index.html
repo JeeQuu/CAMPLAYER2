@@ -506,6 +506,7 @@
 
                 // Load all zone samples
                 for (const [sample, url] of Object.entries(zoneUrls)) {
+                    console.log(`Loading ${sample} from URL: ${url}`);
                     players[sample] = new Tone.Player(url).toDestination();
                     await players[sample].load();
                     addLog(`Loaded: ${sample}`, 'loading');
@@ -513,6 +514,7 @@
 
                 // Load all glitter samples
                 for (const [sample, url] of Object.entries(glitterUrls)) {
+                    console.log(`Loading ${sample} from URL: ${url}`);
                     players[sample] = new Tone.Player(url).toDestination();
                     await players[sample].load();
                     addLog(`Loaded: ${sample}`, 'loading');
@@ -520,6 +522,7 @@
 
                 // Load track
                 const trackUrl = 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656709/AXIS%20samples/track_j02bht.wav';
+                console.log(`Loading track from URL: ${trackUrl}`);
                 players.track = new Tone.Player(trackUrl).toDestination();
                 await players.track.load();
                 addLog('Loaded: track', 'loading');
