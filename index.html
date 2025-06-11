@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Camera Music Instrument Simulator</title>
+    <script src="https://unpkg.com/tone@14.8.49/build/Tone.js"></script>
+    <script src="https://unpkg.com/interactjs@1.10.17/dist/interact.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .camera-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 2px;
+            flex: 1;
+            background: #1a1a1a;
+            padding: 2px;
+            position: relative;
+        }
+
+        .camera-screen {
+            background: #000;
+            border: 1px solid #333;
+            position: relative;
+            overflow: hidden;
+            transition: border-color 0.3s;
+        }
+
+        .camera-screen.active {
+            border-color: #4a9eff;
+        }
+
+        .camera-label {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        .zone {
+            position: absolute;
+            background: rgba(74, 158, 255, 0.3);
+            border: 2px solid #4a9eff;
+            cursor: move;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: white;
+            text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+            transition: all 0.1s;
+            user-select: none;
+            min-width: 50px;
+            min-height: 50px;
+        }
+
+        .zone.active {
+            background: rgba(74, 158, 255, 0.6);
+            border-color: #6bb6ff;
+            box-shadow: 0 0 20px rgba(74, 158, 255, 0.8);
+        }
+
+        .zone.glitter {
+            background: rgba(255, 74, 158, 0.3);
+            border-color: #ff4a9e;
+        }
+
+        .zone.glitter.active {
+            background: rgba(255, 74, 158, 0.6);
+            border-color: #ff6bb6;
+            box-shadow: 0 0 20px rgba(255, 74, 158, 0.8);
+        }
+
+        .zone.disabled {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .control-panel {
+            width: 320px;
+            background: #1a1a1a;
+            padding: 20px;
+            overflow-y: auto;
+            border-left: 1px solid #333;
+        }
+
+        .control-section {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #333;
+        }
+
+        .control-section:last-child {
+            border-bottom: none;
+        }
+
+        h3 {
+            margin-bottom: 15px;
+            color: #4a9eff;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .slider-container {
+            margin-bottom: 15px;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: #333;
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+            border-radius: 3px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #4a9eff;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        button {
+            background: #4a9eff;
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            background: #6bb6ff;
+        }
+
+        button.active {
+            background: #ff4a9e;
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        input[type="checkbox"] {
+            margin-right: 8px;
+        }
+
+        .log {
+            background: #0a0a0a;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 10px;
+            height: 150px;
+            overflow-y: auto;
+            font-size: 11px;
+            font-family: monospace;
+        }
+
+        .log-entry {
+            margin-bottom: 4px;
+            opacity: 0.8;
+        }
+
+        .log-entry.trigger {
+            color: #4a9eff;
+        }
+
+        .log-entry.release {
+            color: #ff4a9e;
+        }
+
+        .log-entry.tracking {
+            color: #ffb74a;
+        }
+
+        .object-icon {
+            position: fixed;
+            width: 40px;
+            height: 40px;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+            font-size: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tracking-box {
+            position: fixed;
+            border: 2px dashed #ffb74a;
+            background: rgba(255, 183, 74, 0.1);
+            pointer-events: none;
+            z-index: 999;
+            display: none;
+            width: 50px;
+            height: 50px;
+        }
+
+        .tracking-box.lost {
+            border-color: #ff4a4a;
+            background: rgba(255, 74, 74, 0.1);
+        }
+
+        .movement-trail {
+            position: fixed;
+            pointer-events: none;
+            z-index: 998;
+        }
+
+        .object-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .object-option {
+            padding: 5px;
+            font-size: 11px;
+            background: #333;
+            border: 1px solid #555;
+            cursor: pointer;
+            text-align: center;
+            border-radius: 3px;
+        }
+
+        .object-option.selected {
+            background: #4a9eff;
+            border-color: #6bb6ff;
+        }
+
+        .add-zone-btn {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(74, 158, 255, 0.8);
+            padding: 6px 12px;
+            font-size: 11px;
+            z-index: 101;
+        }
+
+        .loading-indicator {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 8px;
+            z-index: 10000;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-indicator" id="loading">Loading samples...</div>
+    
+    <div class="container">
+        <div class="camera-grid">
+            <div class="camera-screen" data-camera="0">
+                <div class="camera-label">Camera 1</div>
+                <button class="add-zone-btn" data-camera="0">+ Add Zone</button>
+            </div>
+            <div class="camera-screen" data-camera="1">
+                <div class="camera-label">Camera 2</div>
+                <button class="add-zone-btn" data-camera="1">+ Add Zone</button>
+            </div>
+            <div class="camera-screen" data-camera="2">
+                <div class="camera-label">Camera 3</div>
+                <button class="add-zone-btn" data-camera="2">+ Add Zone</button>
+            </div>
+            <div class="camera-screen" data-camera="3">
+                <div class="camera-label">Camera 4</div>
+                <button class="add-zone-btn" data-camera="3">+ Add Zone</button>
+            </div>
+        </div>
+
+        <div class="control-panel">
+            <h3>Volume Controls</h3>
+            <div class="control-section">
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>Zone Volume</span>
+                        <span id="zone-volume-value">70%</span>
+                    </div>
+                    <input type="range" id="zone-volume" min="0" max="100" value="70">
+                </div>
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>Glitter Volume</span>
+                        <span id="glitter-volume-value">70%</span>
+                    </div>
+                    <input type="range" id="glitter-volume" min="0" max="100" value="70">
+                </div>
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>Track Volume</span>
+                        <span id="track-volume-value">50%</span>
+                    </div>
+                    <input type="range" id="track-volume" min="0" max="100" value="50">
+                </div>
+            </div>
+
+            <h3>Sound Settings</h3>
+            <div class="control-section">
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>Release Time</span>
+                        <span id="release-time-value">0.5s</span>
+                    </div>
+                    <input type="range" id="release-time" min="0.1" max="2" step="0.1" value="0.5">
+                </div>
+                <div class="checkbox-container">
+                    <input type="checkbox" id="glitter-enabled" checked>
+                    <label for="glitter-enabled">Enable Glitter Zones</label>
+                </div>
+                <button id="play-track">▶ Play Track</button>
+                <button id="stop-track">■ Stop Track</button>
+            </div>
+
+            <h3>Axis Object Detection</h3>
+            <div class="control-section">
+                <div class="checkbox-container">
+                    <input type="checkbox" id="axis-sim-enabled">
+                    <label for="axis-sim-enabled">Simulate Axis Object Detection</label>
+                </div>
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>Object Lag</span>
+                        <span id="object-lag-value">300ms</span>
+                    </div>
+                    <input type="range" id="object-lag" min="0" max="1000" step="50" value="300">
+                </div>
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>Tracking Box Lag</span>
+                        <span id="tracking-lag-value">150ms</span>
+                    </div>
+                    <input type="range" id="tracking-lag" min="0" max="500" step="25" value="150">
+                </div>
+                <h4 style="font-size: 12px; margin-top: 15px; margin-bottom: 5px;">Object per Camera:</h4>
+                <div id="object-selectors"></div>
+            </div>
+
+            <h3>Activity Log</h3>
+            <div class="control-section">
+                <div class="log" id="activity-log"></div>
+                <button id="clear-log" style="margin-top: 10px;">Clear Log</button>
+            </div>
+
+            <h3>Layout</h3>
+            <div class="control-section">
+                <button id="save-layout">Save Layout</button>
+                <button id="load-layout">Load Layout</button>
+                <input type="file" id="file-input" style="display: none;" accept=".json">
+            </div>
+        </div>
+    </div>
+
+    <div class="object-icon" id="object-icon"></div>
+    <div class="tracking-box" id="tracking-box"></div>
+    <canvas class="movement-trail" id="trail-canvas"></canvas>
+
+    <script>
+        // Global state
+        let zones = [];
+        let samples = {
+            zones: {},
+            glitterZones: {},
+            track: null
+        };
+        let players = {};
+        let activeZones = new Set();
+        let zoneCounter = 0;
+        let glitterCounter = 0;
+        let axisSimEnabled = false;
+        let glitterEnabled = true;
+        let trackPlaying = false;
+        let selectedObjects = [0, 1, 2, 3]; // Default objects per camera
+        let mousePositions = [];
+        let objectPosition = { x: 0, y: 0 };
+        let trackingPosition = { x: 0, y: 0 };
+        let trackingLocked = true;
+        let lastMouseSpeed = 0;
+        let mouseVelocity = { x: 0, y: 0 };
+        let lastMousePos = { x: 0, y: 0 };
+        let lastMouseTime = Date.now();
+
+        // Initialize Tone.js
+        const zoneVolume = new Tone.Volume(-6).toDestination();
+        const glitterVolume = new Tone.Volume(-6).toDestination();
+        const trackVolume = new Tone.Volume(-12).toDestination();
+        let trackPlayer = null;
+
+        // Object types
+        const objectTypes = ['☕ Kaffekopp', '🌻 Solros', '🧯 Brandsläckare', '🎾 Tennisboll'];
+        const objectIcons = ['☕', '🌻', '🧯', '🎾'];
+
+        // Initialize
+        async function init() {
+            showLoading(true);
+            setupObjectSelectors();
+            setupEventListeners();
+            await loadSamples();
+            setupTrailCanvas();
+            animate();
+            showLoading(false);
+            addLog('Simulator ready - click anywhere to enable audio');
+            
+            // Add click handler to start audio context
+            document.addEventListener('click', startAudio, { once: true });
+        }
+
+        // Start audio context after user interaction
+        async function startAudio() {
+            try {
+                await Tone.start();
+                addLog('Audio context started successfully', 'trigger');
+            } catch (err) {
+                addLog('Failed to start audio: ' + err.message, 'tracking');
+            }
+        }
+
+        // Show/hide loading indicator
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        // Load all samples
+        async function loadSamples() {
+            try {
+                // Load zone samples
+                for (let i = 1; i <= 14; i++) {
+                    const num = i.toString().padStart(2, '0');
+                    const sample = `zone${num}`;
+                    players[sample] = new Tone.Player(`samples/${sample}.mp3`).toDestination();
+                    await players[sample].load();
+                    addLog(`Loaded: ${sample}`, 'loading');
+                }
+
+                // Load glitter samples
+                for (let i = 1; i <= 9; i++) {
+                    const num = i.toString().padStart(2, '0');
+                    const sample = `glitterzone${num}`;
+                    players[sample] = new Tone.Player(`samples/${sample}.mp3`).toDestination();
+                    await players[sample].load();
+                    addLog(`Loaded: ${sample}`, 'loading');
+                }
+
+                // Load track
+                players.track = new Tone.Player('samples/track.mp3').toDestination();
+                await players.track.load();
+                addLog('Loaded: track', 'loading');
+
+                addLog('All samples loaded successfully!', 'loading');
+            } catch (err) {
+                console.error('Error loading samples:', err);
+                addLog(`Error loading samples: ${err.message}`, 'loading');
+            }
+        }
+
+        // Setup object selectors for each camera
+        function setupObjectSelectors() {
+            const container = document.getElementById('object-selectors');
+            for (let camera = 0; camera < 4; camera++) {
+                const cameraDiv = document.createElement('div');
+                cameraDiv.innerHTML = `<div style="font-size: 11px; margin-bottom: 5px;">Camera ${camera + 1}:</div>`;
+                
+                const selector = document.createElement('div');
+                selector.className = 'object-selector';
+                
+                objectTypes.forEach((type, idx) => {
+                    const option = document.createElement('div');
+                    option.className = 'object-option';
+                    option.textContent = type;
+                    option.onclick = () => selectObject(camera, idx);
+                    if (idx === selectedObjects[camera]) {
+                        option.classList.add('selected');
+                    }
+                    selector.appendChild(option);
+                });
+                
+                cameraDiv.appendChild(selector);
+                container.appendChild(cameraDiv);
+            }
+        }
+
+        // Select object for camera
+        function selectObject(camera, objectIdx) {
+            selectedObjects[camera] = objectIdx;
+            const selectors = document.getElementById('object-selectors');
+            const cameraSelector = selectors.children[camera].querySelector('.object-selector');
+            cameraSelector.querySelectorAll('.object-option').forEach((opt, idx) => {
+                opt.classList.toggle('selected', idx === objectIdx);
+            });
+            addLog(`Camera ${camera + 1} object changed to ${objectTypes[objectIdx]}`);
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Volume controls
+            document.getElementById('zone-volume').addEventListener('input', (e) => {
+                const val = e.target.value;
+                document.getElementById('zone-volume-value').textContent = val + '%';
+                zoneVolume.volume.value = Tone.gainToDb(val / 100);
+            });
+            
+            document.getElementById('glitter-volume').addEventListener('input', (e) => {
+                const val = e.target.value;
+                document.getElementById('glitter-volume-value').textContent = val + '%';
+                glitterVolume.volume.value = Tone.gainToDb(val / 100);
+            });
+            
+            document.getElementById('track-volume').addEventListener('input', (e) => {
+                const val = e.target.value;
+                document.getElementById('track-volume-value').textContent = val + '%';
+                trackVolume.volume.value = Tone.gainToDb(val / 100);
+            });
+            
+            // Release time
+            document.getElementById('release-time').addEventListener('input', (e) => {
+                const val = e.target.value;
+                document.getElementById('release-time-value').textContent = val + 's';
+            });
+            
+            // Glitter zones toggle
+            document.getElementById('glitter-enabled').addEventListener('change', (e) => {
+                glitterEnabled = e.target.checked;
+                zones.filter(z => z.classList.contains('glitter')).forEach(zone => {
+                    zone.classList.toggle('disabled', !glitterEnabled);
+                });
+                addLog(`Glitter zones ${glitterEnabled ? 'enabled' : 'disabled'}`);
+            });
+            
+            // Track controls
+            document.getElementById('play-track').addEventListener('click', () => {
+                if (!trackPlaying && trackPlayer) {
+                    trackPlayer.start();
+                    trackPlaying = true;
+                    document.getElementById('play-track').classList.add('active');
+                    addLog('Track playing', 'trigger');
+                }
+            });
+            
+            document.getElementById('stop-track').addEventListener('click', () => {
+                if (trackPlaying && trackPlayer) {
+                    trackPlayer.stop();
+                    trackPlaying = false;
+                    document.getElementById('play-track').classList.remove('active');
+                    addLog('Track stopped', 'release');
+                }
+            });
+            
+            // Axis simulation
+            document.getElementById('axis-sim-enabled').addEventListener('change', (e) => {
+                axisSimEnabled = e.target.checked;
+                document.getElementById('object-icon').style.display = axisSimEnabled ? 'block' : 'none';
+                document.getElementById('tracking-box').style.display = axisSimEnabled ? 'block' : 'none';
+                if (!axisSimEnabled) {
+                    clearTrail();
+                    // Release all active zones when turning off axis mode
+                    [...activeZones].forEach(zone => releaseZone(zone));
+                }
+                addLog(`Axis simulation ${axisSimEnabled ? 'enabled' : 'disabled'}`);
+            });
+            
+            // Lag controls
+            document.getElementById('object-lag').addEventListener('input', (e) => {
+                document.getElementById('object-lag-value').textContent = e.target.value + 'ms';
+            });
+            
+            document.getElementById('tracking-lag').addEventListener('input', (e) => {
+                document.getElementById('tracking-lag-value').textContent = e.target.value + 'ms';
+            });
+            
+            // Add zone buttons
+            document.querySelectorAll('.add-zone-btn').forEach(btn => {
+                console.log('Setting up add zone button for camera', btn.dataset.camera); // Debug
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const camera = parseInt(e.target.dataset.camera);
+                    console.log('Add zone button clicked for camera', camera); // Debug
+                    addZone(camera);
+                });
+            });
+            
+            // Clear log
+            document.getElementById('clear-log').addEventListener('click', () => {
+                document.getElementById('activity-log').innerHTML = '';
+            });
+            
+            // Save/Load
+            document.getElementById('save-layout').addEventListener('click', saveLayout);
+            document.getElementById('load-layout').addEventListener('click', () => {
+                document.getElementById('file-input').click();
+            });
+            document.getElementById('file-input').addEventListener('change', loadLayout);
+            
+            // Mouse tracking
+            document.addEventListener('mousemove', handleMouseMove);
+        }
+
+        // Add zone to camera
+        function addZone(cameraIdx) {
+            console.log('Adding zone to camera', cameraIdx); // Debug log
+            
+            const cameraGrid = document.querySelector('.camera-grid');
+            const camera = document.querySelectorAll('.camera-screen')[cameraIdx];
+            const cameraRect = camera.getBoundingClientRect();
+            const gridRect = cameraGrid.getBoundingClientRect();
+            
+            // Determine if this should be a glitter zone (simple logic for now)
+            const totalZones = zones.length;
+            const isGlitter = totalZones >= 14; // After 14 regular zones, start adding glitter zones
+            
+            const zone = document.createElement('div');
+            zone.className = 'zone' + (isGlitter ? ' glitter' : '');
+            
+            // Position relative to the camera grid
+            const relativeX = cameraRect.left - gridRect.left + 50;
+            const relativeY = cameraRect.top - gridRect.top + 50;
+            
+            zone.style.left = relativeX + 'px';
+            zone.style.top = relativeY + 'px';
+            zone.style.width = '100px';
+            zone.style.height = '100px';
+            zone.style.position = 'absolute';
+            
+            let sampleKey;
+            if (isGlitter) {
+                glitterCounter++;
+                sampleKey = `glitterzone${String(glitterCounter).padStart(2, '0')}`;
+            } else {
+                zoneCounter++;
+                sampleKey = `zone${String(zoneCounter).padStart(2, '0')}`;
+            }
+            
+            zone.dataset.sample = sampleKey;
+            zone.dataset.camera = cameraIdx;
+            zone.textContent = sampleKey;
+            
+            console.log('Created zone element:', zone); // Debug log
+            
+            cameraGrid.appendChild(zone);
+            zones.push(zone);
+            
+            setupZoneInteraction(zone);
+            setupZoneHover(zone);
+            
+            if (isGlitter && !glitterEnabled) {
+                zone.classList.add('disabled');
+            }
+            
+            addLog(`Added ${sampleKey} to Camera ${cameraIdx + 1}`, 'trigger');
+            console.log('Zone added successfully'); // Debug log
+        }
+
+        // Setup zone interaction (drag/resize)
+        function setupZoneInteraction(zone) {
+            interact(zone)
+                .draggable({
+                    inertia: true,
+                    modifiers: [
+                        interact.modifiers.restrictRect({
+                            restriction: '.camera-grid',
+                            endOnly: true
+                        })
+                    ],
+                    autoScroll: true,
+                    listeners: {
+                        move: dragMoveListener,
+                        end: updateZoneCamera
+                    }
+                })
+                .resizable({
+                    edges: { left: true, right: true, bottom: true, top: true },
+                    listeners: {
+                        move(event) {
+                            let { x, y } = event.target.dataset;
+                            x = (parseFloat(x) || 0) + event.deltaRect.left;
+                            y = (parseFloat(y) || 0) + event.deltaRect.top;
+                            
+                            Object.assign(event.target.style, {
+                                width: `${event.rect.width}px`,
+                                height: `${event.rect.height}px`,
+                                transform: `translate(${x}px, ${y}px)`
+                            });
+                            
+                            Object.assign(event.target.dataset, { x, y });
+                        }
+                    },
+                    modifiers: [
+                        interact.modifiers.restrictEdges({
+                            outer: '.camera-grid'
+                        }),
+                        interact.modifiers.restrictSize({
+                            min: { width: 50, height: 50 }
+                        })
+                    ],
+                    inertia: true
+                });
+        }
+
+        // Drag move listener
+        function dragMoveListener(event) {
+            const target = event.target;
+            const x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
+            const y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
+            
+            target.style.transform = `translate(${x}px, ${y}px)`;
+            target.setAttribute('data-x', x);
+            target.setAttribute('data-y', y);
+        }
+
+        // Update zone's camera assignment based on position
+        function updateZoneCamera(event) {
+            const zone = event.target;
+            const zoneRect = zone.getBoundingClientRect();
+            const zoneCenter = {
+                x: zoneRect.left + zoneRect.width / 2,
+                y: zoneRect.top + zoneRect.height / 2
+            };
+            
+            const cameras = document.querySelectorAll('.camera-screen');
+            for (let i = 0; i < cameras.length; i++) {
+                const cameraRect = cameras[i].getBoundingClientRect();
+                if (zoneCenter.x >= cameraRect.left && zoneCenter.x <= cameraRect.right &&
+                    zoneCenter.y >= cameraRect.top && zoneCenter.y <= cameraRect.bottom) {
+                    if (zone.dataset.camera !== i.toString()) {
+                        const oldCamera = parseInt(zone.dataset.camera) + 1;
+                        zone.dataset.camera = i;
+                        addLog(`Moved ${zone.dataset.sample} from Camera ${oldCamera} to Camera ${i + 1}`, 'trigger');
+                    }
+                    break;
+                }
+            }
+        }
+
+        // Setup zone hover detection
+        function setupZoneHover(zone) {
+            zone.addEventListener('mouseenter', () => {
+                if (!axisSimEnabled) {
+                    triggerZone(zone);
+                }
+            });
+            
+            zone.addEventListener('mouseleave', () => {
+                if (!axisSimEnabled) {
+                    releaseZone(zone);
+                }
+            });
+        }
+
+        // Handle mouse movement for Axis simulation
+        function handleMouseMove(e) {
+            const currentTime = Date.now();
+            const deltaTime = currentTime - lastMouseTime;
+            
+            if (deltaTime > 0) {
+                mouseVelocity.x = (e.clientX - lastMousePos.x) / deltaTime * 1000;
+                mouseVelocity.y = (e.clientY - lastMousePos.y) / deltaTime * 1000;
+                lastMouseSpeed = Math.sqrt(mouseVelocity.x ** 2 + mouseVelocity.y ** 2);
+            }
+            
+            lastMousePos = { x: e.clientX, y: e.clientY };
+            lastMouseTime = currentTime;
+            
+            if (axisSimEnabled) {
+                // Add to trail
+                mousePositions.push({
+                    x: e.clientX,
+                    y: e.clientY,
+                    time: currentTime
+                });
+                
+                // Keep only last 0.5 seconds
+                mousePositions = mousePositions.filter(pos => currentTime - pos.time < 500);
+            }
+        }
+
+        // Animation loop for Axis simulation
+        function animate() {
+            if (axisSimEnabled) {
+                updateObjectPosition();
+                updateTrackingBox();
+                checkZoneCollisions();
+                drawTrail();
+            }
+            requestAnimationFrame(animate);
+        }
+
+        // Update object position with lag
+        function updateObjectPosition() {
+            const objectLag = parseInt(document.getElementById('object-lag').value);
+            const icon = document.getElementById('object-icon');
+            
+            // Smooth movement with lag
+            const targetX = lastMousePos.x;
+            const targetY = lastMousePos.y;
+            
+            const lagFactor = Math.max(0.01, 1 - objectLag / 1000);
+            objectPosition.x += (targetX - objectPosition.x) * lagFactor;
+            objectPosition.y += (targetY - objectPosition.y) * lagFactor;
+            
+            // Update object icon
+            const cameraGrid = document.querySelector('.camera-grid');
+            const gridRect = cameraGrid.getBoundingClientRect();
+            let selectedObjectIcon = '☕'; // default
+            
+            // Determine which camera the mouse is over and use that object
+            const cameras = document.querySelectorAll('.camera-screen');
+            for (let i = 0; i < cameras.length; i++) {
+                const cameraRect = cameras[i].getBoundingClientRect();
+                if (lastMousePos.x >= cameraRect.left && lastMousePos.x <= cameraRect.right &&
+                    lastMousePos.y >= cameraRect.top && lastMousePos.y <= cameraRect.bottom) {
+                    selectedObjectIcon = objectIcons[selectedObjects[i]];
+                    break;
+                }
+            }
+            
+            icon.textContent = selectedObjectIcon;
+            icon.style.left = objectPosition.x - 20 + 'px';
+            icon.style.top = objectPosition.y - 20 + 'px';
+        }
+
+        // Update tracking box with additional lag
+        function updateTrackingBox() {
+            const trackingLag = parseInt(document.getElementById('tracking-lag').value);
+            const speedThreshold = 800; // pixels per second
+            
+            // Check if tracking should be lost due to fast movement
+            if (lastMouseSpeed > speedThreshold && trackingLocked) {
+                trackingLocked = false;
+                addLog('Tracking lock lost!', 'tracking');
+            } else if (lastMouseSpeed < speedThreshold * 0.5 && !trackingLocked) {
+                trackingLocked = true;
+                addLog('Tracking lock regained', 'tracking');
+            }
+            
+            const box = document.getElementById('tracking-box');
+            box.classList.toggle('lost', !trackingLocked);
+            
+            if (trackingLocked) {
+                // Smooth tracking with additional lag beyond object lag
+                const lagFactor = Math.max(0.01, 1 - trackingLag / 1000);
+                trackingPosition.x += (objectPosition.x - trackingPosition.x) * lagFactor;
+                trackingPosition.y += (objectPosition.y - trackingPosition.y) * lagFactor;
+            }
+            
+            box.style.left = trackingPosition.x - 25 + 'px';
+            box.style.top = trackingPosition.y - 25 + 'px';
+        }
+
+        // Check zone collisions in axis mode
+        function checkZoneCollisions() {
+            if (!trackingLocked) {
+                // If tracking is lost, release all zones
+                [...activeZones].forEach(zone => releaseZone(zone));
+                return;
+            }
+            
+            const trackingRect = {
+                left: trackingPosition.x - 25,
+                top: trackingPosition.y - 25,
+                right: trackingPosition.x + 25,
+                bottom: trackingPosition.y + 25
+            };
+            
+            zones.forEach(zone => {
+                const rect = zone.getBoundingClientRect();
+                const isGlitter = zone.classList.contains('glitter');
+                
+                if ((isGlitter && !glitterEnabled) || zone.classList.contains('disabled')) return;
+                
+                const overlapping = !(
+                    rect.left > trackingRect.right ||
+                    rect.right < trackingRect.left ||
+                    rect.top > trackingRect.bottom ||
+                    rect.bottom < trackingRect.top
+                );
+                
+                if (overlapping && !activeZones.has(zone)) {
+                    triggerZone(zone);
+                } else if (!overlapping && activeZones.has(zone)) {
+                    releaseZone(zone);
+                }
+            });
+        }
+
+        // Trigger zone
+        function triggerZone(zone) {
+            if (zone.classList.contains('disabled')) return;
+            
+            activeZones.add(zone);
+            zone.classList.add('active');
+            
+            const sample = zone.dataset.sample;
+            const player = players[sample];
+            if (player) {
+                try {
+                    // Check if player is loaded, if not just log
+                    if (player.loaded) {
+                        player.start();
+                    } else {
+                        console.log(`Player ${sample} not yet loaded`);
+                    }
+                } catch (err) {
+                    console.log('Player start error:', err);
+                }
+            }
+            
+            addLog(`Triggered: ${sample}`, 'trigger');
+        }
+
+        // Release zone
+        function releaseZone(zone) {
+            activeZones.delete(zone);
+            zone.classList.remove('active');
+            
+            const sample = zone.dataset.sample;
+            const player = players[sample];
+            if (player && player.loaded) {
+                try {
+                    const releaseTime = parseFloat(document.getElementById('release-time').value);
+                    player.stop(Tone.now() + releaseTime);
+                } catch (err) {
+                    console.log('Player stop error:', err);
+                }
+            }
+            
+            addLog(`Released: ${sample}`, 'release');
+        }
+
+        // Setup trail canvas
+        function setupTrailCanvas() {
+            const canvas = document.getElementById('trail-canvas');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            window.addEventListener('resize', () => {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            });
+        }
+
+        // Draw movement trail
+        function drawTrail() {
+            const canvas = document.getElementById('trail-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (!axisSimEnabled || mousePositions.length < 2) return;
+            
+            ctx.strokeStyle = 'rgba(74, 158, 255, 0.5)';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            ctx.beginPath();
+            mousePositions.forEach((pos, i) => {
+                const age = (Date.now() - pos.time) / 500; // 0 to 1
+                ctx.globalAlpha = Math.max(0, 1 - age);
+                
+                if (i === 0) {
+                    ctx.moveTo(pos.x, pos.y);
+                } else {
+                    ctx.lineTo(pos.x, pos.y);
+                }
+            });
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+        }
+
+        // Clear trail
+        function clearTrail() {
+            const canvas = document.getElementById('trail-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            mousePositions = [];
+        }
+
+        // Add log entry
+        function addLog(message, type = 'info') {
+            const log = document.getElementById('activity-log');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry ' + type;
+            const time = new Date().toLocaleTimeString();
+            entry.textContent = `[${time}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+            
+            // Keep only last 100 entries
+            while (log.children.length > 100) {
+                log.removeChild(log.firstChild);
+            }
+        }
+
+        // Save layout
+        function saveLayout() {
+            const layout = {
+                zones: [],
+                settings: {
+                    zoneVolume: document.getElementById('zone-volume').value,
+                    glitterVolume: document.getElementById('glitter-volume').value,
+                    trackVolume: document.getElementById('track-volume').value,
+                    releaseTime: document.getElementById('release-time').value,
+                    glitterEnabled: document.getElementById('glitter-enabled').checked,
+                    objectLag: document.getElementById('object-lag').value,
+                    trackingLag: document.getElementById('tracking-lag').value,
+                    selectedObjects: selectedObjects
+                }
+            };
+            
+            zones.forEach(zone => {
+                const rect = zone.getBoundingClientRect();
+                const gridRect = document.querySelector('.camera-grid').getBoundingClientRect();
+                
+                layout.zones.push({
+                    sample: zone.dataset.sample,
+                    camera: parseInt(zone.dataset.camera),
+                    left: rect.left - gridRect.left,
+                    top: rect.top - gridRect.top,
+                    width: rect.width,
+                    height: rect.height,
+                    isGlitter: zone.classList.contains('glitter')
+                });
+            });
+            
+            const blob = new Blob([JSON.stringify(layout, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'camera-music-layout.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            addLog('Layout saved', 'trigger');
+        }
+
+        // Load layout (simplified for now)
+        function loadLayout(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const layout = JSON.parse(e.target.result);
+                    addLog('Layout loaded successfully', 'trigger');
+                    // Implementation would restore zones and settings here
+                } catch (err) {
+                    addLog('Error loading layout: ' + err.message, 'tracking');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Initialize on load with error checking
+        window.addEventListener('load', () => {
+            // Check if libraries loaded
+            if (typeof Tone === 'undefined') {
+                addLog('ERROR: Tone.js failed to load', 'tracking');
+                return;
+            }
+            if (typeof interact === 'undefined') {
+                addLog('ERROR: interact.js failed to load', 'tracking');
+                return;
+            }
+            init();
+        });
+    </script>
+</body>
+</html> 
