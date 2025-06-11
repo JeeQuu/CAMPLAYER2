@@ -473,37 +473,34 @@
         // Load all samples
         async function loadSamples() {
             try {
-                const cloudName = 'dakoxedxt';
-                const baseUrl = `https://res.cloudinary.com/${cloudName}/video/upload/v1749656709/AXIS%20samples`;
-                
-                // Load zone samples
+                // Load zone samples with exact URLs
                 const zoneUrls = {
-                    'zone01': `${baseUrl}/zone01_bjoosj.wav`,
-                    'zone02': `${baseUrl}/zone02_ao3gsw.wav`,
-                    'zone03': `${baseUrl}/zone03_zmavkq.wav`,
-                    'zone05': `${baseUrl}/zone05_jun4yk.wav`,
-                    'zone06': `${baseUrl}/zone06_kqdgi8.wav`,
-                    'zone07': `${baseUrl}/zone07_zob4lj.wav`,
-                    'zone08': `${baseUrl}/zone08_nvpcor.wav`,
-                    'zone09': `${baseUrl}/zone09_rjwn3r.wav`,
-                    'zone10': `${baseUrl}/zone10_e6s3rp.wav`,
-                    'zone11': `${baseUrl}/zone11_mmx0gv.wav`,
-                    'zone12': `${baseUrl}/zone12_xffycx.wav`,
-                    'zone13': `${baseUrl}/zone13_orhede.wav`,
-                    'zone14': `${baseUrl}/zone14_wbs8dk.wav`
+                    'zone01': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656704/AXIS%20samples/zone01_bjoosj.wav',
+                    'zone02': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656700/AXIS%20samples/zone02_ao3gsw.wav',
+                    'zone03': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656703/AXIS%20samples/zone03_zmavkq.wav',
+                    'zone05': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656694/AXIS%20samples/zone05_jun4yk.wav',
+                    'zone06': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656700/AXIS%20samples/zone06_kqdgi8.wav',
+                    'zone07': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656696/AXIS%20samples/zone07_zob4lj.wav',
+                    'zone08': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656706/AXIS%20samples/zone08_nvpcor.wav',
+                    'zone09': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656709/AXIS%20samples/zone09_rjwn3r.wav',
+                    'zone10': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656691/AXIS%20samples/zone10_e6s3rp.wav',
+                    'zone11': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656695/AXIS%20samples/zone11_mmx0gv.wav',
+                    'zone12': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656699/AXIS%20samples/zone12_xffycx.wav',
+                    'zone13': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656696/AXIS%20samples/zone13_orhede.wav',
+                    'zone14': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656705/AXIS%20samples/zone14_wbs8dk.wav'
                 };
 
-                // Load glitter samples
+                // Load glitter samples with exact URLs
                 const glitterUrls = {
-                    'glitterzone01': `${baseUrl}/glitterzone01_no9dak.wav`,
-                    'glitterzone02': `${baseUrl}/glitterzone02_t8dxnh.wav`,
-                    'glitterzone03': `${baseUrl}/glitterzone03_e5cpbn.wav`,
-                    'glitterzone04': `${baseUrl}/glitterzone04_opzhnq.wav`,
-                    'glitterzone05': `${baseUrl}/glitterzone05_nipy3t.wav`,
-                    'glitterzone06': `${baseUrl}/glitterzone06_xnlrkl.wav`,
-                    'glitterzone07': `${baseUrl}/glitterzone07_fzwdwy.wav`,
-                    'glitterzone08': `${baseUrl}/glitterzone08_pwjlpd.wav`,
-                    'glitterzone09': `${baseUrl}/glitterzone09_dbayzf.wav`
+                    'glitterzone01': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656705/AXIS%20samples/glitterzone01_no9dak.wav',
+                    'glitterzone02': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656701/AXIS%20samples/glitterzone02_t8dxnh.wav',
+                    'glitterzone03': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656702/AXIS%20samples/glitterzone03_e5cpbn.wav',
+                    'glitterzone04': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656692/AXIS%20samples/glitterzone04_opzhnq.wav',
+                    'glitterzone05': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656693/AXIS%20samples/glitterzone05_nipy3t.wav',
+                    'glitterzone06': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656698/AXIS%20samples/glitterzone06_xnlrkl.wav',
+                    'glitterzone07': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656697/AXIS%20samples/glitterzone07_fzwdwy.wav',
+                    'glitterzone08': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656707/AXIS%20samples/glitterzone08_pwjlpd.wav',
+                    'glitterzone09': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656708/AXIS%20samples/glitterzone09_dbayzf.wav'
                 };
 
                 // Load all zone samples
@@ -521,7 +518,7 @@
                 }
 
                 // Load track
-                const trackUrl = `${baseUrl}/track_j02bht.wav`;
+                const trackUrl = 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656709/AXIS%20samples/track_j02bht.wav';
                 players.track = new Tone.Player(trackUrl).toDestination();
                 await players.track.load();
                 addLog('Loaded: track', 'loading');
