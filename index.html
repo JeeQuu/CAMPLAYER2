@@ -520,30 +520,26 @@
             });
         }
 
-        // Start audio context and load samples after user interaction
+        // Start audio context and load samples
         async function startAudioAndLoadSamples() {
             try {
-                // Hide audio prompt
-                const audioPrompt = document.getElementById('audio-prompt');
-                if (audioPrompt) {
-                    audioPrompt.style.display = 'none';
+                // Ensure Tone.js context is started first
+                if (Tone.context.state !== 'running') {
+                    await Tone.start();
+                    console.log('AudioContext started successfully');
                 }
                 
-                showLoading(true);
-                addLog('Starting audio context...', 'loading');
+                // Wait a moment for context to be fully ready
+                await new Promise(resolve => setTimeout(resolve, 100));
                 
-                // Start Tone.js audio context
-                await Tone.start();
-                addLog('Audio context started successfully', 'trigger');
-                
-                // Now load samples
                 await loadSamples();
                 
-                showLoading(false);
-                addLog('Ready to make music! Click zones to select samples, hover to play.', 'trigger');
+                // Hide the audio prompt
+                document.getElementById('audio-prompt').style.display = 'none';
+                addLog('Audio system initialized', 'loading');
             } catch (err) {
-                addLog('Failed to start audio: ' + err.message, 'tracking');
-                showLoading(false);
+                console.error('Error starting audio:', err);
+                addLog(`Audio initialization failed: ${err.message}`, 'loading');
             }
         }
 
@@ -555,6 +551,11 @@
         // Load all samples
         async function loadSamples() {
             try {
+                // Verify AudioContext is running
+                if (Tone.context.state !== 'running') {
+                    throw new Error('AudioContext not running - cannot load samples');
+                }
+                
                 // GitHub raw URLs for direct file access with cache busting
                 const baseUrl = 'https://raw.githubusercontent.com/JeeQuu/CAMPLAYER2/main/samples';
                 const cacheBuster = Date.now(); // Force fresh download
@@ -586,13 +587,34 @@
                     const url = `${baseUrl}/${encodeURIComponent(filename)}?v=${cacheBuster}`;
                     console.log(`Loading sample: ${sampleKey} from ${url}`);
                     
-                    players[sampleKey] = new Tone.Player(url).toDestination();
-                    await players[sampleKey].load();
-                    addLog(`Loaded: ${sampleKey}`, 'loading');
+                    try {
+                        // Create player with explicit configuration
+                        const player = new Tone.Player({
+                            url: url,
+                            onload: () => {
+                                console.log(`Player loaded successfully: ${sampleKey}`);
+                            },
+                            onerror: (error) => {
+                                console.error(`Player load error for ${sampleKey}:`, error);
+                            }
+                        }).toDestination();
+                        
+                        players[sampleKey] = player;
+                        
+                        // Wait for the player to load
+                        await player.load();
+                        console.log(`Successfully loaded: ${sampleKey}`);
+                        addLog(`Loaded: ${sampleKey}`, 'loading');
+                    } catch (sampleErr) {
+                        console.error(`Failed to load sample ${sampleKey}:`, sampleErr);
+                        addLog(`Failed to load: ${sampleKey}`, 'loading');
+                        // Continue with other samples even if one fails
+                    }
                 }
 
-                console.log('All samples loaded successfully!');
-                addLog('All samples loaded successfully!', 'loading');
+                const loadedCount = Object.keys(players).length;
+                console.log(`Sample loading complete. Loaded ${loadedCount} out of ${sampleFiles.length} samples.`);
+                addLog(`Sample loading complete: ${loadedCount}/${sampleFiles.length} loaded`, 'loading');
                 
                 // Debug: Show loaded players
                 console.log('Loaded players:', Object.keys(players));
