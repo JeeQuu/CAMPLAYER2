@@ -381,13 +381,6 @@
                 </div>
                 <div class="slider-container">
                     <div class="slider-label">
-                        <span>Glitter Volume</span>
-                        <span id="glitter-volume-value">70%</span>
-                    </div>
-                    <input type="range" id="glitter-volume" min="0" max="100" value="70">
-                </div>
-                <div class="slider-container">
-                    <div class="slider-label">
                         <span>Track Volume</span>
                         <span id="track-volume-value">50%</span>
                     </div>
@@ -403,10 +396,6 @@
                         <span id="release-time-value">0.5s</span>
                     </div>
                     <input type="range" id="release-time" min="0.1" max="2" step="0.1" value="0.5">
-                </div>
-                <div class="checkbox-container">
-                    <input type="checkbox" id="glitter-enabled" checked>
-                    <label for="glitter-enabled">Enable Glitter Zones</label>
                 </div>
                 <button id="play-track">▶ Play Track</button>
                 <button id="stop-track">■ Stop Track</button>
@@ -468,15 +457,12 @@
         let zones = [];
         let samples = {
             zones: {},
-            glitterZones: {},
             track: null
         };
         let players = {};
         let activeZones = new Set();
         let zoneCounter = 0;
-        let glitterCounter = 0;
         let axisSimEnabled = false;
-        let glitterEnabled = true;
         let trackPlaying = false;
         let selectedObjects = [0, 1, 2, 3]; // Default objects per camera
         let mousePositions = [];
@@ -490,7 +476,6 @@
 
         // Initialize Tone.js
         const zoneVolume = new Tone.Volume(-6).toDestination();
-        const glitterVolume = new Tone.Volume(-6).toDestination();
         const trackVolume = new Tone.Volume(-12).toDestination();
         let trackPlayer = null;
 
@@ -576,7 +561,8 @@
                     'diva_lead_dry_04.mp3',
                     'diva_lead_dry_05.mp3',
                     'diva_lead_dry_08.mp3',
-                    'diva_lead_dry_09.mp3'
+                    'diva_lead_dry_09.mp3',
+                    'MUSIC_BACKING 12jun.mp3'
                 ];
 
                 console.log(`Loading ${sampleFiles.length} samples with cache buster: ${cacheBuster}`);
@@ -588,7 +574,7 @@
                     console.log(`Loading sample: ${sampleKey} from ${url}`);
                     
                     try {
-                        // Create player with explicit configuration
+                        // Create player with explicit configuration and release envelope
                         const player = new Tone.Player({
                             url: url,
                             onload: () => {
@@ -597,12 +583,31 @@
                             onerror: (error) => {
                                 console.error(`Player load error for ${sampleKey}:`, error);
                             }
-                        }).toDestination();
+                        });
                         
-                        players[sampleKey] = player;
+                        // Add release envelope for smoother fade-outs
+                        const envelope = new Tone.AmplitudeEnvelope({
+                            attack: 0.01,
+                            decay: 0.1,
+                            sustain: 1.0,
+                            release: 0.5 // 500ms release time
+                        });
+                        
+                        // Connect: Player -> Envelope -> Destination
+                        player.connect(envelope);
+                        envelope.toDestination();
+                        
+                        // Store both player and envelope for control
+                        players[sampleKey] = {
+                            player: player,
+                            envelope: envelope,
+                            load: () => player.load(),
+                            loaded: false
+                        };
                         
                         // Wait for the player to load
                         await player.load();
+                        players[sampleKey].loaded = true;
                         console.log(`Successfully loaded: ${sampleKey}`);
                         addLog(`Loaded: ${sampleKey}`, 'loading');
                     } catch (sampleErr) {
@@ -612,7 +617,7 @@
                     }
                 }
 
-                const loadedCount = Object.keys(players).length;
+                const loadedCount = Object.keys(players).filter(key => players[key].loaded).length;
                 console.log(`Sample loading complete. Loaded ${loadedCount} out of ${sampleFiles.length} samples.`);
                 addLog(`Sample loading complete: ${loadedCount}/${sampleFiles.length} loaded`, 'loading');
                 
@@ -671,12 +676,6 @@
                 zoneVolume.volume.value = Tone.gainToDb(val / 100);
             });
             
-            document.getElementById('glitter-volume').addEventListener('input', (e) => {
-                const val = e.target.value;
-                document.getElementById('glitter-volume-value').textContent = val + '%';
-                glitterVolume.volume.value = Tone.gainToDb(val / 100);
-            });
-            
             document.getElementById('track-volume').addEventListener('input', (e) => {
                 const val = e.target.value;
                 document.getElementById('track-volume-value').textContent = val + '%';
@@ -687,15 +686,6 @@
             document.getElementById('release-time').addEventListener('input', (e) => {
                 const val = e.target.value;
                 document.getElementById('release-time-value').textContent = val + 's';
-            });
-            
-            // Glitter zones toggle
-            document.getElementById('glitter-enabled').addEventListener('change', (e) => {
-                glitterEnabled = e.target.checked;
-                zones.filter(z => z.classList.contains('glitter')).forEach(zone => {
-                    zone.classList.toggle('disabled', !glitterEnabled);
-                });
-                addLog(`Glitter zones ${glitterEnabled ? 'enabled' : 'disabled'}`);
             });
             
             // Track controls
@@ -768,11 +758,11 @@
         }
 
         // Add zone to camera
-        function addZone(cameraIdx, isGlitter = false) {
+        function addZone(cameraIdx) {
             console.log('Adding zone to camera', cameraIdx); // Debug log
             
             const zone = document.createElement('div');
-            zone.className = isGlitter ? 'zone glitter' : 'zone';
+            zone.className = 'zone';
             zone.style.left = '52px';
             zone.style.top = '52px';
             zone.style.width = '100px';
@@ -782,52 +772,21 @@
             const cameraGrid = document.querySelector('.camera-screen[data-camera="' + cameraIdx + '"]');
             
             // Get available loaded samples
-            const loadedSamples = Object.keys(players).filter(key => players[key] && players[key].loaded);
+            const loadedSamples = Object.keys(players).filter(key => players[key].loaded);
             console.log('Available loaded samples:', loadedSamples); // Debug log
             
             // Default sample selection
-            let sampleKey;
-            if (loadedSamples.length > 0) {
-                // Randomly select from loaded samples
-                sampleKey = loadedSamples[Math.floor(Math.random() * loadedSamples.length)];
-            } else {
-                // Fallback to first expected sample if none loaded yet
-                sampleKey = 'moog_bass_0105';
-                console.log('No samples loaded yet, using fallback:', sampleKey);
-            }
+            let sampleKey = loadedSamples[Math.floor(Math.random() * loadedSamples.length)];
             
             let zoneId = Date.now(); // Unique ID for each zone
             
             zone.dataset.sample = sampleKey;
             zone.dataset.camera = cameraIdx;
             zone.dataset.zoneId = zoneId;
-            zone.dataset.playMode = 'hold'; // 'hold' or 'oneshot'
             zone.textContent = sampleKey.replace(/_/g, ' ');
             
             console.log(`Zone created with sample: ${sampleKey}, player exists: ${!!players[sampleKey]}`); // Debug log
 
-            // Add playmode indicator
-            const modeIndicator = document.createElement('div');
-            modeIndicator.className = 'mode-indicator';
-            modeIndicator.textContent = '◐'; // Hold mode symbol
-            modeIndicator.style.cssText = `
-                position: absolute;
-                top: -8px;
-                right: -8px;
-                background: #4a9eff;
-                color: white;
-                border-radius: 50%;
-                width: 16px;
-                height: 16px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 10px;
-                cursor: pointer;
-                z-index: 102;
-            `;
-            zone.appendChild(modeIndicator);
-            
             console.log('Created zone element:', zone); // Debug log
             
             cameraGrid.appendChild(zone);
@@ -836,10 +795,6 @@
             setupZoneInteraction(zone);
             setupZoneHover(zone);
             setupZoneClick(zone);
-            
-            if (isGlitter && !glitterEnabled) {
-                zone.classList.add('disabled');
-            }
             
             addLog(`Added zone with ${sampleKey} to Camera ${cameraIdx + 1}`, 'trigger');
             console.log('Zone added successfully'); // Debug log
@@ -852,7 +807,7 @@
                     inertia: true,
                     modifiers: [
                         interact.modifiers.restrictRect({
-                            restriction: '.camera-grid',
+                            restriction: '.camera-grid', // Allow dragging across entire grid
                             endOnly: true
                         })
                     ],
@@ -881,7 +836,7 @@
                     },
                     modifiers: [
                         interact.modifiers.restrictEdges({
-                            outer: '.camera-grid'
+                            outer: '.camera-grid' // Allow resizing across entire grid
                         }),
                         interact.modifiers.restrictSize({
                             min: { width: 50, height: 50 }
@@ -928,15 +883,26 @@
 
         // Setup zone hover detection
         function setupZoneHover(zone) {
+            let hoverTimeout;
+            
             zone.addEventListener('mouseenter', () => {
                 if (!axisSimEnabled) {
+                    // Clear any pending release
+                    if (hoverTimeout) {
+                        clearTimeout(hoverTimeout);
+                        hoverTimeout = null;
+                    }
                     triggerZone(zone);
                 }
             });
             
             zone.addEventListener('mouseleave', () => {
                 if (!axisSimEnabled) {
-                    releaseZone(zone);
+                    // Add small delay to prevent rapid trigger/release
+                    hoverTimeout = setTimeout(() => {
+                        releaseZone(zone);
+                        hoverTimeout = null;
+                    }, 50);
                 }
             });
         }
@@ -973,7 +939,7 @@
             if (axisSimEnabled) {
                 updateObjectPosition();
                 updateTrackingBox();
-                checkZoneCollisions();
+                checkZoneOverlaps();
                 drawTrail();
             }
             requestAnimationFrame(animate);
@@ -1041,104 +1007,92 @@
             box.style.top = trackingPosition.y - 25 + 'px';
         }
 
-        // Check zone collisions in axis mode
-        function checkZoneCollisions() {
-            if (!trackingLocked) {
-                // If tracking is lost, release all zones
-                [...activeZones].forEach(zone => releaseZone(zone));
-                return;
-            }
+        // Check zone overlaps for Axis simulation
+        function checkZoneOverlaps() {
+            if (!axisSimEnabled) return;
             
-            const trackingRect = {
-                left: trackingPosition.x - 25,
-                top: trackingPosition.y - 25,
-                right: trackingPosition.x + 25,
-                bottom: trackingPosition.y + 25
-            };
+            const trackingBox = document.getElementById('tracking-box');
+            const trackingRect = trackingBox.getBoundingClientRect();
+            
+            const currentlyOverlapping = new Set();
             
             zones.forEach(zone => {
                 const rect = zone.getBoundingClientRect();
-                const isGlitter = zone.classList.contains('glitter');
-                
-                if ((isGlitter && !glitterEnabled) || zone.classList.contains('disabled')) return;
                 
                 const overlapping = !(
-                    rect.left > trackingRect.right ||
-                    rect.right < trackingRect.left ||
-                    rect.top > trackingRect.bottom ||
-                    rect.bottom < trackingRect.top
+                    trackingRect.right < rect.left || 
+                    trackingRect.left > rect.right || 
+                    trackingRect.bottom < rect.top || 
+                    trackingRect.top > rect.bottom
                 );
                 
-                if (overlapping && !activeZones.has(zone)) {
-                    triggerZone(zone);
-                } else if (!overlapping && activeZones.has(zone)) {
-                    releaseZone(zone);
+                if (overlapping) {
+                    currentlyOverlapping.add(zone);
+                    // Only trigger if not already active
+                    if (!activeZones.has(zone)) {
+                        triggerZone(zone);
+                    }
+                } else {
+                    // Only release if currently active
+                    if (activeZones.has(zone)) {
+                        releaseZone(zone);
+                    }
                 }
             });
         }
 
         // Trigger zone
         function triggerZone(zone) {
-            if (!zone || zone.classList.contains('disabled')) return;
+            if (!zone || zone.classList.contains('disabled') || activeZones.has(zone)) return;
             
             const sample = zone.dataset.sample;
-            const playMode = zone.dataset.playMode;
-            const player = players[sample];
+            const playerObj = players[sample];
             
-            console.log(`Triggering zone - sample: ${sample}, player exists: ${!!player}, players keys:`, Object.keys(players)); // Debug log
+            console.log(`Triggering zone - sample: ${sample}, player exists: ${!!playerObj}, players keys:`, Object.keys(players)); // Debug log
             
-            if (!player) {
-                console.log(`No player found for sample: ${sample}`);
-                return;
-            }
-            
-            // Check if player is loaded
-            if (!player.loaded) {
-                console.log(`Player ${sample} not yet loaded`);
+            if (!playerObj || !playerObj.loaded) {
+                console.log(`No player found or not loaded for sample: ${sample}`);
                 return;
             }
             
             try {
-                if (playMode === 'oneshot') {
-                    // One-shot mode: always trigger a new playback
-                    player.start();
-                    zone.classList.add('active');
-                    addLog(`Triggered (one-shot): ${sample}`, 'trigger');
-                    
-                    // Remove active class after a short time for visual feedback
-                    setTimeout(() => {
-                        zone.classList.remove('active');
-                    }, 200);
-                } else {
-                    // Hold mode: only trigger if not already active
-                    if (!activeZones.has(zone)) {
-                        activeZones.add(zone);
-                        zone.classList.add('active');
-                        player.start();
-                        addLog(`Triggered (hold): ${sample}`, 'trigger');
-                    }
-                }
+                activeZones.add(zone);
+                zone.classList.add('active');
+                
+                // Trigger envelope and start player
+                playerObj.envelope.triggerAttack();
+                playerObj.player.start();
+                
+                addLog(`Triggered: ${sample}`, 'trigger');
             } catch (err) {
                 console.log('Player start error:', err);
+                activeZones.delete(zone);
+                zone.classList.remove('active');
             }
         }
 
         // Release zone
         function releaseZone(zone) {
-            const sample = zone.dataset.sample;
-            const playMode = zone.dataset.playMode;
-            const player = players[sample];
+            if (!activeZones.has(zone)) return;
             
-            // Only handle release for hold mode
-            if (playMode !== 'hold') return;
+            const sample = zone.dataset.sample;
+            const playerObj = players[sample];
             
             activeZones.delete(zone);
             zone.classList.remove('active');
             
-            if (player && player.loaded) {
+            if (playerObj && playerObj.loaded) {
                 try {
+                    // Trigger envelope release for smooth fade-out
+                    playerObj.envelope.triggerRelease();
+                    
+                    // Stop the player after release time
                     const releaseTime = parseFloat(document.getElementById('release-time').value);
-                    player.stop(Tone.now() + releaseTime);
+                    setTimeout(() => {
+                        if (playerObj.player.state === 'started') {
+                            playerObj.player.stop();
+                        }
+                    }, releaseTime * 1000);
                 } catch (err) {
                     console.log('Player stop error:', err);
                 }
@@ -1217,10 +1171,9 @@
                 zones: [],
                 settings: {
                     zoneVolume: document.getElementById('zone-volume').value,
-                    glitterVolume: document.getElementById('glitter-volume').value,
                     trackVolume: document.getElementById('track-volume').value,
                     releaseTime: document.getElementById('release-time').value,
-                    glitterEnabled: document.getElementById('glitter-enabled').checked,
+                    axisSimEnabled: document.getElementById('axis-sim-enabled').checked,
                     objectLag: document.getElementById('object-lag').value,
                     trackingLag: document.getElementById('tracking-lag').value,
                     selectedObjects: selectedObjects
@@ -1238,7 +1191,6 @@
                     top: rect.top - gridRect.top,
                     width: rect.width,
                     height: rect.height,
-                    isGlitter: zone.classList.contains('glitter')
                 });
             });
             
@@ -1271,22 +1223,12 @@
             reader.readAsText(file);
         }
 
-        // Setup zone click for sample selection and mode toggle
+        // Setup zone click for sample selection only
         function setupZoneClick(zone) {
-            const modeIndicator = zone.querySelector('.mode-indicator');
-            
             // Zone click for sample selection
             zone.addEventListener('click', (e) => {
-                if (e.target === modeIndicator) return; // Don't trigger on mode indicator
-                
                 e.stopPropagation();
                 showSampleSelector(zone);
-            });
-            
-            // Mode indicator click for playback mode toggle
-            modeIndicator.addEventListener('click', (e) => {
-                e.stopPropagation();
-                togglePlayMode(zone);
             });
         }
 
@@ -1318,15 +1260,10 @@
             title.style.cssText = 'margin: 0 0 15px 0; color: #4a9eff;';
             modal.appendChild(title);
             
-            const sampleFiles = [
-                'moog_bass_0105', 'moog_bass_0104', 'countermelody', 'moog_bass_0103',
-                'moog_bass_0102', 'moog_bass_0101', 'diva_lead_dry_01', 'diva_lead_dry_02',
-                'diva_lead_dry_03', 'diva_lead_dry_07', 'diva_lead_dry_06', 'noise_splash',
-                'diva_lead_dry_10', 'diva_lead_dry_04', 'diva_lead_dry_05', 'diva_lead_dry_08',
-                'diva_lead_dry_09'
-            ];
+            // Get available samples from loaded players
+            const availableSamples = Object.keys(players).filter(key => players[key].loaded);
             
-            sampleFiles.forEach(sampleKey => {
+            availableSamples.forEach(sampleKey => {
                 const button = document.createElement('button');
                 button.textContent = sampleKey.replace(/_/g, ' ');
                 button.style.cssText = `
@@ -1376,24 +1313,6 @@
                     }
                 });
             }, 100);
-        }
-
-        // Toggle play mode between hold and one-shot
-        function togglePlayMode(zone) {
-            const modeIndicator = zone.querySelector('.mode-indicator');
-            const currentMode = zone.dataset.playMode;
-            
-            if (currentMode === 'hold') {
-                zone.dataset.playMode = 'oneshot';
-                modeIndicator.textContent = '●'; // One-shot symbol
-                modeIndicator.style.background = '#ff4a9e';
-                addLog(`Zone switched to one-shot mode`, 'trigger');
-            } else {
-                zone.dataset.playMode = 'hold';
-                modeIndicator.textContent = '◐'; // Hold symbol
-                modeIndicator.style.background = '#4a9eff';
-                addLog(`Zone switched to hold mode`, 'trigger');
-            }
         }
 
         // Initialize on load with error checking
