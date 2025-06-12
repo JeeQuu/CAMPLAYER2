@@ -473,59 +473,35 @@
         // Load all samples
         async function loadSamples() {
             try {
-                // TODO: Replace with Firebase Storage URLs tomorrow
-                // Current: Cloudinary URLs (working but with deployment cache issues)
-                // Future: Firebase Storage URLs (cleaner, more reliable)
-                
-                const zoneUrls = {
-                    'zone01': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656704/AXIS%20samples/zone01_bjoosj.wav',
-                    'zone02': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656700/AXIS%20samples/zone02_ao3gsw.wav',
-                    'zone03': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656703/AXIS%20samples/zone03_zmavkq.wav',
-                    'zone04': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656692/AXIS%20samples/zone04_so54ov.wav',
-                    'zone05': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656694/AXIS%20samples/zone05_jun4yk.wav',
-                    'zone06': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656700/AXIS%20samples/zone06_kqdgi8.wav',
-                    'zone07': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656696/AXIS%20samples/zone07_zob4lj.wav',
-                    'zone08': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656706/AXIS%20samples/zone08_nvpcor.wav',
-                    'zone09': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656709/AXIS%20samples/zone09_rjwn3r.wav',
-                    'zone10': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656691/AXIS%20samples/zone10_e6s3rp.wav',
-                    'zone11': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656695/AXIS%20samples/zone11_mmx0gv.wav',
-                    'zone12': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656699/AXIS%20samples/zone12_xffycx.wav',
-                    'zone13': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656696/AXIS%20samples/zone13_orhede.wav',
-                    'zone14': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656705/AXIS%20samples/zone14_wbs8dk.wav'
-                };
+                // GitHub-hosted samples - much simpler!
+                const sampleFiles = [
+                    'moog_bass_0105.mp3',
+                    'moog_bass_0104.mp3', 
+                    'countermelody.mp3',
+                    'moog_bass_0103.mp3',
+                    'moog_bass_0102.mp3',
+                    'moog_bass_0101.mp3',
+                    'diva_lead_dry_01.mp3',
+                    'diva_lead_dry_02.mp3',
+                    'diva_lead_dry_03.mp3',
+                    'diva_lead_dry_07.mp3',
+                    'diva_lead_dry_06.mp3',
+                    'noise splash.mp3',
+                    'diva_lead_dry_10.mp3',
+                    'diva_lead_dry_04.mp3',
+                    'diva_lead_dry_05.mp3',
+                    'diva_lead_dry_08.mp3',
+                    'diva_lead_dry_09.mp3'
+                ];
 
-                const glitterUrls = {
-                    'glitterzone01': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656705/AXIS%20samples/glitterzone01_no9dak.wav',
-                    'glitterzone02': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656701/AXIS%20samples/glitterzone02_t8dxnh.wav',
-                    'glitterzone03': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656702/AXIS%20samples/glitterzone03_e5cpbn.wav',
-                    'glitterzone04': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656692/AXIS%20samples/glitterzone04_opzhnq.wav',
-                    'glitterzone05': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656693/AXIS%20samples/glitterzone05_nipy3t.wav',
-                    'glitterzone06': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656698/AXIS%20samples/glitterzone06_xnlrkl.wav',
-                    'glitterzone07': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656697/AXIS%20samples/glitterzone07_fzwdwy.wav',
-                    'glitterzone08': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656707/AXIS%20samples/glitterzone08_pwjlpd.wav',
-                    'glitterzone09': 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656708/AXIS%20samples/glitterzone09_dbayzf.wav'
-                };
-
-                const trackUrl = 'https://res.cloudinary.com/dakoxedxt/video/upload/v1749656709/AXIS%20samples/track_j02bht.wav';
-
-                // Load zone samples
-                for (const [sample, url] of Object.entries(zoneUrls)) {
-                    players[sample] = new Tone.Player(url).toDestination();
-                    await players[sample].load();
-                    addLog(`Loaded: ${sample}`, 'loading');
+                // Load all samples into players object
+                for (const filename of sampleFiles) {
+                    const sampleKey = filename.replace('.mp3', '').replace(' ', '_');
+                    const url = `samples/${filename}`;
+                    players[sampleKey] = new Tone.Player(url).toDestination();
+                    await players[sampleKey].load();
+                    addLog(`Loaded: ${sampleKey}`, 'loading');
                 }
-
-                // Load glitter samples
-                for (const [sample, url] of Object.entries(glitterUrls)) {
-                    players[sample] = new Tone.Player(url).toDestination();
-                    await players[sample].load();
-                    addLog(`Loaded: ${sample}`, 'loading');
-                }
-
-                // Load track
-                players.track = new Tone.Player(trackUrl).toDestination();
-                await players.track.load();
-                addLog('Loaded: track', 'loading');
 
                 addLog('All samples loaded successfully!', 'loading');
             } catch (err) {
@@ -677,43 +653,58 @@
         }
 
         // Add zone to camera
-        function addZone(cameraIdx) {
+        function addZone(cameraIdx, isGlitter = false) {
             console.log('Adding zone to camera', cameraIdx); // Debug log
             
-            const cameraGrid = document.querySelector('.camera-grid');
-            const camera = document.querySelectorAll('.camera-screen')[cameraIdx];
-            const cameraRect = camera.getBoundingClientRect();
-            const gridRect = cameraGrid.getBoundingClientRect();
-            
-            // Determine if this should be a glitter zone (simple logic for now)
-            const totalZones = zones.length;
-            const isGlitter = totalZones >= 14; // After 14 regular zones, start adding glitter zones
-            
             const zone = document.createElement('div');
-            zone.className = 'zone' + (isGlitter ? ' glitter' : '');
-            
-            // Position relative to the camera grid
-            const relativeX = cameraRect.left - gridRect.left + 50;
-            const relativeY = cameraRect.top - gridRect.top + 50;
-            
-            zone.style.left = relativeX + 'px';
-            zone.style.top = relativeY + 'px';
+            zone.className = isGlitter ? 'zone glitter' : 'zone';
+            zone.style.left = '52px';
+            zone.style.top = '52px';
             zone.style.width = '100px';
             zone.style.height = '100px';
             zone.style.position = 'absolute';
             
-            let sampleKey;
-            if (isGlitter) {
-                glitterCounter++;
-                sampleKey = `glitterzone${String(glitterCounter).padStart(2, '0')}`;
-            } else {
-                zoneCounter++;
-                sampleKey = `zone${String(zoneCounter).padStart(2, '0')}`;
-            }
+            const cameraGrid = document.querySelector('.camera-screen[data-camera="' + cameraIdx + '"]');
+            
+            // Default to first available sample
+            const sampleFiles = [
+                'moog_bass_0105', 'moog_bass_0104', 'countermelody', 'moog_bass_0103',
+                'moog_bass_0102', 'moog_bass_0101', 'diva_lead_dry_01', 'diva_lead_dry_02',
+                'diva_lead_dry_03', 'diva_lead_dry_07', 'diva_lead_dry_06', 'noise_splash',
+                'diva_lead_dry_10', 'diva_lead_dry_04', 'diva_lead_dry_05', 'diva_lead_dry_08',
+                'diva_lead_dry_09'
+            ];
+            
+            let sampleKey = sampleFiles[0]; // Default to first sample
+            let zoneId = Date.now(); // Unique ID for each zone
             
             zone.dataset.sample = sampleKey;
             zone.dataset.camera = cameraIdx;
-            zone.textContent = sampleKey;
+            zone.dataset.zoneId = zoneId;
+            zone.dataset.playMode = 'hold'; // 'hold' or 'oneshot'
+            zone.textContent = sampleKey.replace(/_/g, ' ');
+            
+            // Add playmode indicator
+            const modeIndicator = document.createElement('div');
+            modeIndicator.className = 'mode-indicator';
+            modeIndicator.textContent = '◐'; // Hold mode symbol
+            modeIndicator.style.cssText = `
+                position: absolute;
+                top: -8px;
+                right: -8px;
+                background: #4a9eff;
+                color: white;
+                border-radius: 50%;
+                width: 16px;
+                height: 16px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 10px;
+                cursor: pointer;
+                z-index: 102;
+            `;
+            zone.appendChild(modeIndicator);
             
             console.log('Created zone element:', zone); // Debug log
             
@@ -722,12 +713,13 @@
             
             setupZoneInteraction(zone);
             setupZoneHover(zone);
+            setupZoneClick(zone);
             
             if (isGlitter && !glitterEnabled) {
                 zone.classList.add('disabled');
             }
             
-            addLog(`Added ${sampleKey} to Camera ${cameraIdx + 1}`, 'trigger');
+            addLog(`Added zone with ${sampleKey} to Camera ${cameraIdx + 1}`, 'trigger');
             console.log('Zone added successfully'); // Debug log
         }
 
@@ -967,34 +959,58 @@
         function triggerZone(zone) {
             if (zone.classList.contains('disabled')) return;
             
-            activeZones.add(zone);
-            zone.classList.add('active');
-            
             const sample = zone.dataset.sample;
+            const playMode = zone.dataset.playMode;
             const player = players[sample];
-            if (player) {
-                try {
-                    // Check if player is loaded, if not just log
-                    if (player.loaded) {
-                        player.start();
-                    } else {
-                        console.log(`Player ${sample} not yet loaded`);
-                    }
-                } catch (err) {
-                    console.log('Player start error:', err);
-                }
+            
+            if (!player) {
+                console.log(`No player found for sample: ${sample}`);
+                return;
             }
             
-            addLog(`Triggered: ${sample}`, 'trigger');
+            // Check if player is loaded
+            if (!player.loaded) {
+                console.log(`Player ${sample} not yet loaded`);
+                return;
+            }
+            
+            try {
+                if (playMode === 'oneshot') {
+                    // One-shot mode: always trigger a new playback
+                    player.start();
+                    zone.classList.add('active');
+                    addLog(`Triggered (one-shot): ${sample}`, 'trigger');
+                    
+                    // Remove active class after a short time for visual feedback
+                    setTimeout(() => {
+                        zone.classList.remove('active');
+                    }, 200);
+                } else {
+                    // Hold mode: only trigger if not already active
+                    if (!activeZones.has(zone)) {
+                        activeZones.add(zone);
+                        zone.classList.add('active');
+                        player.start();
+                        addLog(`Triggered (hold): ${sample}`, 'trigger');
+                    }
+                }
+            } catch (err) {
+                console.log('Player start error:', err);
+            }
         }
 
         // Release zone
         function releaseZone(zone) {
+            const sample = zone.dataset.sample;
+            const playMode = zone.dataset.playMode;
+            const player = players[sample];
+            
+            // Only handle release for hold mode
+            if (playMode !== 'hold') return;
+            
             activeZones.delete(zone);
             zone.classList.remove('active');
             
-            const sample = zone.dataset.sample;
-            const player = players[sample];
             if (player && player.loaded) {
                 try {
                     const releaseTime = parseFloat(document.getElementById('release-time').value);
@@ -1129,6 +1145,131 @@
                 }
             };
             reader.readAsText(file);
+        }
+
+        // Setup zone click for sample selection and mode toggle
+        function setupZoneClick(zone) {
+            const modeIndicator = zone.querySelector('.mode-indicator');
+            
+            // Zone click for sample selection
+            zone.addEventListener('click', (e) => {
+                if (e.target === modeIndicator) return; // Don't trigger on mode indicator
+                
+                e.stopPropagation();
+                showSampleSelector(zone);
+            });
+            
+            // Mode indicator click for playback mode toggle
+            modeIndicator.addEventListener('click', (e) => {
+                e.stopPropagation();
+                togglePlayMode(zone);
+            });
+        }
+
+        // Show sample selector modal
+        function showSampleSelector(zone) {
+            // Remove existing selector if any
+            const existing = document.querySelector('.sample-selector-modal');
+            if (existing) existing.remove();
+            
+            const modal = document.createElement('div');
+            modal.className = 'sample-selector-modal';
+            modal.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: #1a1a1a;
+                border: 2px solid #4a9eff;
+                border-radius: 8px;
+                padding: 20px;
+                z-index: 10000;
+                max-height: 400px;
+                overflow-y: auto;
+                min-width: 300px;
+            `;
+            
+            const title = document.createElement('h3');
+            title.textContent = 'Select Sample';
+            title.style.cssText = 'margin: 0 0 15px 0; color: #4a9eff;';
+            modal.appendChild(title);
+            
+            const sampleFiles = [
+                'moog_bass_0105', 'moog_bass_0104', 'countermelody', 'moog_bass_0103',
+                'moog_bass_0102', 'moog_bass_0101', 'diva_lead_dry_01', 'diva_lead_dry_02',
+                'diva_lead_dry_03', 'diva_lead_dry_07', 'diva_lead_dry_06', 'noise_splash',
+                'diva_lead_dry_10', 'diva_lead_dry_04', 'diva_lead_dry_05', 'diva_lead_dry_08',
+                'diva_lead_dry_09'
+            ];
+            
+            sampleFiles.forEach(sampleKey => {
+                const button = document.createElement('button');
+                button.textContent = sampleKey.replace(/_/g, ' ');
+                button.style.cssText = `
+                    display: block;
+                    width: 100%;
+                    margin: 5px 0;
+                    padding: 10px;
+                    background: ${zone.dataset.sample === sampleKey ? '#4a9eff' : '#333'};
+                    border: 1px solid #555;
+                    color: white;
+                    border-radius: 4px;
+                    cursor: pointer;
+                `;
+                
+                button.addEventListener('click', () => {
+                    zone.dataset.sample = sampleKey;
+                    zone.firstChild.textContent = sampleKey.replace(/_/g, ' ');
+                    addLog(`Zone sample changed to ${sampleKey}`, 'trigger');
+                    modal.remove();
+                });
+                
+                modal.appendChild(button);
+            });
+            
+            const closeButton = document.createElement('button');
+            closeButton.textContent = 'Close';
+            closeButton.style.cssText = `
+                margin-top: 15px;
+                padding: 8px 16px;
+                background: #666;
+                border: none;
+                color: white;
+                border-radius: 4px;
+                cursor: pointer;
+            `;
+            closeButton.addEventListener('click', () => modal.remove());
+            modal.appendChild(closeButton);
+            
+            document.body.appendChild(modal);
+            
+            // Close on outside click
+            setTimeout(() => {
+                document.addEventListener('click', function closeModal(e) {
+                    if (!modal.contains(e.target)) {
+                        modal.remove();
+                        document.removeEventListener('click', closeModal);
+                    }
+                });
+            }, 100);
+        }
+
+        // Toggle play mode between hold and one-shot
+        function togglePlayMode(zone) {
+            const modeIndicator = zone.querySelector('.mode-indicator');
+            const currentMode = zone.dataset.playMode;
+            
+            if (currentMode === 'hold') {
+                zone.dataset.playMode = 'oneshot';
+                modeIndicator.textContent = '●'; // One-shot symbol
+                modeIndicator.style.background = '#ff4a9e';
+                addLog(`Zone switched to one-shot mode`, 'trigger');
+            } else {
+                zone.dataset.playMode = 'hold';
+                modeIndicator.textContent = '◐'; // Hold symbol
+                modeIndicator.style.background = '#4a9eff';
+                addLog(`Zone switched to hold mode`, 'trigger');
+            }
         }
 
         // Initialize on load with error checking
