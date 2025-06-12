@@ -502,7 +502,7 @@
             enableButton.addEventListener('click', (e) => {
                 e.stopPropagation();
                 enableAudio();
-            });hf
+            });
         }
 
         // Start audio context and load samples
@@ -556,7 +556,7 @@
                     'diva_lead_dry_03.mp3',
                     'diva_lead_dry_07.mp3',
                     'diva_lead_dry_06.mp3',
-                    'noise splash.mp3',
+                    'noise_splash.mp3',
                     'diva_lead_dry_10.mp3',
                     'diva_lead_dry_04.mp3',
                     'diva_lead_dry_05.mp3',
@@ -841,7 +841,7 @@
                     inertia: true,
                     modifiers: [
                         interact.modifiers.restrictRect({
-                            restriction: '.camera-grid', // Allow dragging across entire grid
+                            restriction: '.camera-grid',
                             endOnly: true
                         })
                     ],
@@ -870,7 +870,7 @@
                     },
                     modifiers: [
                         interact.modifiers.restrictEdges({
-                            outer: '.camera-grid' // Allow resizing across entire grid
+                            outer: '.camera-grid'
                         }),
                         interact.modifiers.restrictSize({
                             min: { width: 50, height: 50 }
@@ -878,6 +878,38 @@
                     ],
                     inertia: true
                 });
+
+            // Add trigger mode button
+            const triggerBtn = document.createElement('button');
+            triggerBtn.className = 'trigger-mode-btn';
+            triggerBtn.innerHTML = '🔒';
+            triggerBtn.style.cssText = `
+                position: absolute;
+                top: 5px;
+                right: 5px;
+                background: rgba(74, 158, 255, 0.8);
+                border: none;
+                color: white;
+                width: 20px;
+                height: 20px;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 12px;
+                padding: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 102;
+            `;
+            
+            triggerBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                zone.classList.toggle('glitter');
+                triggerBtn.innerHTML = zone.classList.contains('glitter') ? '🔓' : '🔒';
+                addLog(`Trigger mode ${zone.classList.contains('glitter') ? 'enabled' : 'disabled'} for ${zone.dataset.sample}`);
+            });
+            
+            zone.appendChild(triggerBtn);
         }
 
         // Drag move listener
@@ -886,20 +918,7 @@
             const x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
             const y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
             
-            // Get the camera grid bounds
-            const gridRect = document.querySelector('.camera-grid').getBoundingClientRect();
-            
-            // Calculate the zone's position relative to the grid
-            const zoneRect = target.getBoundingClientRect();
-            const relativeX = zoneRect.left - gridRect.left + event.dx;
-            const relativeY = zoneRect.top - gridRect.top + event.dy;
-            
-            // Update the zone's position
-            target.style.left = relativeX + 'px';
-            target.style.top = relativeY + 'px';
-            target.style.transform = 'none'; // Remove transform to use absolute positioning
-            
-            // Store the position
+            target.style.transform = `translate(${x}px, ${y}px)`;
             target.setAttribute('data-x', x);
             target.setAttribute('data-y', y);
         }
