@@ -593,6 +593,10 @@
 
                 console.log('All samples loaded successfully!');
                 addLog('All samples loaded successfully!', 'loading');
+                
+                // Debug: Show loaded players
+                console.log('Loaded players:', Object.keys(players));
+                console.log('Players object:', players);
             } catch (err) {
                 console.error('Error loading samples:', err);
                 addLog(`Error loading samples: ${err.message}`, 'loading');
@@ -755,16 +759,21 @@
             
             const cameraGrid = document.querySelector('.camera-screen[data-camera="' + cameraIdx + '"]');
             
-            // Default to first available sample
-            const sampleFiles = [
-                'moog_bass_0105', 'moog_bass_0104', 'countermelody', 'moog_bass_0103',
-                'moog_bass_0102', 'moog_bass_0101', 'diva_lead_dry_01', 'diva_lead_dry_02',
-                'diva_lead_dry_03', 'diva_lead_dry_07', 'diva_lead_dry_06', 'noise_splash',
-                'diva_lead_dry_10', 'diva_lead_dry_04', 'diva_lead_dry_05', 'diva_lead_dry_08',
-                'diva_lead_dry_09'
-            ];
+            // Get available loaded samples
+            const loadedSamples = Object.keys(players).filter(key => players[key] && players[key].loaded);
+            console.log('Available loaded samples:', loadedSamples); // Debug log
             
-            let sampleKey = sampleFiles[0]; // Default to first sample
+            // Default sample selection
+            let sampleKey;
+            if (loadedSamples.length > 0) {
+                // Randomly select from loaded samples
+                sampleKey = loadedSamples[Math.floor(Math.random() * loadedSamples.length)];
+            } else {
+                // Fallback to first expected sample if none loaded yet
+                sampleKey = 'moog_bass_0105';
+                console.log('No samples loaded yet, using fallback:', sampleKey);
+            }
+            
             let zoneId = Date.now(); // Unique ID for each zone
             
             zone.dataset.sample = sampleKey;
@@ -773,6 +782,8 @@
             zone.dataset.playMode = 'hold'; // 'hold' or 'oneshot'
             zone.textContent = sampleKey.replace(/_/g, ' ');
             
+            console.log(`Zone created with sample: ${sampleKey}, player exists: ${!!players[sampleKey]}`); // Debug log
+
             // Add playmode indicator
             const modeIndicator = document.createElement('div');
             modeIndicator.className = 'mode-indicator';
@@ -1046,11 +1057,13 @@
 
         // Trigger zone
         function triggerZone(zone) {
-            if (zone.classList.contains('disabled')) return;
+            if (!zone || zone.classList.contains('disabled')) return;
             
             const sample = zone.dataset.sample;
             const playMode = zone.dataset.playMode;
             const player = players[sample];
+            
+            console.log(`Triggering zone - sample: ${sample}, player exists: ${!!player}, players keys:`, Object.keys(players)); // Debug log
             
             if (!player) {
                 console.log(`No player found for sample: ${sample}`);
