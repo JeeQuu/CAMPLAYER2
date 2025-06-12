@@ -502,7 +502,7 @@
             enableButton.addEventListener('click', (e) => {
                 e.stopPropagation();
                 enableAudio();
-            });
+            });hf
         }
 
         // Start audio context and load samples
@@ -565,6 +565,30 @@
                 ];
 
                 console.log(`Loading ${sampleFiles.length} samples with cache buster: ${cacheBuster}`);
+
+                // Load backing track first
+                try {
+                    const trackUrl = `${baseUrl}/backing_track.mp3?v=${cacheBuster}`;
+                    console.log('Loading backing track from:', trackUrl);
+                    
+                    trackPlayer = new Tone.Player({
+                        url: trackUrl,
+                        onload: () => {
+                            console.log('Backing track loaded successfully');
+                            trackPlayer.connect(trackVolume);
+                            addLog('Backing track loaded', 'loading');
+                        },
+                        onerror: (error) => {
+                            console.error('Backing track load error:', error);
+                            addLog('Failed to load backing track', 'loading');
+                        }
+                    });
+                    
+                    await trackPlayer.load();
+                } catch (trackErr) {
+                    console.error('Error loading backing track:', trackErr);
+                    addLog('Error loading backing track: ' + trackErr.message, 'loading');
+                }
 
                 // Load all samples into players object
                 for (const filename of sampleFiles) {
@@ -862,7 +886,20 @@
             const x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
             const y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
             
-            target.style.transform = `translate(${x}px, ${y}px)`;
+            // Get the camera grid bounds
+            const gridRect = document.querySelector('.camera-grid').getBoundingClientRect();
+            
+            // Calculate the zone's position relative to the grid
+            const zoneRect = target.getBoundingClientRect();
+            const relativeX = zoneRect.left - gridRect.left + event.dx;
+            const relativeY = zoneRect.top - gridRect.top + event.dy;
+            
+            // Update the zone's position
+            target.style.left = relativeX + 'px';
+            target.style.top = relativeY + 'px';
+            target.style.transform = 'none'; // Remove transform to use absolute positioning
+            
+            // Store the position
             target.setAttribute('data-x', x);
             target.setAttribute('data-y', y);
         }
