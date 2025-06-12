@@ -473,7 +473,8 @@
         // Load all samples
         async function loadSamples() {
             try {
-                // GitHub-hosted samples - much simpler!
+                // GitHub raw URLs for direct file access
+                const baseUrl = 'https://raw.githubusercontent.com/JeeQuu/CAMPLAYER2/main/samples';
                 const sampleFiles = [
                     'moog_bass_0105.mp3',
                     'moog_bass_0104.mp3', 
@@ -497,7 +498,7 @@
                 // Load all samples into players object
                 for (const filename of sampleFiles) {
                     const sampleKey = filename.replace('.mp3', '').replace(' ', '_');
-                    const url = `samples/${filename}`;
+                    const url = `${baseUrl}/${encodeURIComponent(filename)}`;
                     players[sampleKey] = new Tone.Player(url).toDestination();
                     await players[sampleKey].load();
                     addLog(`Loaded: ${sampleKey}`, 'loading');
