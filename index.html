@@ -294,6 +294,56 @@
             z-index: 10000;
             display: none;
         }
+
+        .audio-prompt {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            cursor: pointer;
+        }
+
+        .audio-prompt-content {
+            background: #1a1a1a;
+            border: 2px solid #4a9eff;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            max-width: 400px;
+        }
+
+        .audio-prompt h2 {
+            color: #4a9eff;
+            margin: 0 0 15px 0;
+            font-size: 24px;
+        }
+
+        .audio-prompt p {
+            color: #e0e0e0;
+            margin: 0 0 20px 0;
+            line-height: 1.5;
+        }
+
+        .audio-prompt button {
+            background: #4a9eff;
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .audio-prompt button:hover {
+            background: #6bb6ff;
+        }
     </style>
 </head>
 <body>
@@ -405,6 +455,14 @@
     <div class="tracking-box" id="tracking-box"></div>
     <canvas class="movement-trail" id="trail-canvas"></canvas>
 
+    <div class="audio-prompt" id="audio-prompt">
+        <div class="audio-prompt-content">
+            <h2>Welcome to the Advanced Camera Music Instrument Simulator</h2>
+            <p>Click anywhere to enable audio and load samples.</p>
+            <button id="enable-audio">Enable Audio</button>
+        </div>
+    </div>
+
     <script>
         // Global state
         let zones = [];
@@ -445,23 +503,47 @@
             showLoading(true);
             setupObjectSelectors();
             setupEventListeners();
-            await loadSamples();
             setupTrailCanvas();
             animate();
             showLoading(false);
-            addLog('Simulator ready - click anywhere to enable audio');
             
-            // Add click handler to start audio context
-            document.addEventListener('click', startAudio, { once: true });
+            // Set up audio prompt click handlers
+            const audioPrompt = document.getElementById('audio-prompt');
+            const enableButton = document.getElementById('enable-audio');
+            
+            const enableAudio = () => startAudioAndLoadSamples();
+            
+            audioPrompt.addEventListener('click', enableAudio);
+            enableButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                enableAudio();
+            });
         }
 
-        // Start audio context after user interaction
-        async function startAudio() {
+        // Start audio context and load samples after user interaction
+        async function startAudioAndLoadSamples() {
             try {
+                // Hide audio prompt
+                const audioPrompt = document.getElementById('audio-prompt');
+                if (audioPrompt) {
+                    audioPrompt.style.display = 'none';
+                }
+                
+                showLoading(true);
+                addLog('Starting audio context...', 'loading');
+                
+                // Start Tone.js audio context
                 await Tone.start();
                 addLog('Audio context started successfully', 'trigger');
+                
+                // Now load samples
+                await loadSamples();
+                
+                showLoading(false);
+                addLog('Ready to make music! Click zones to select samples, hover to play.', 'trigger');
             } catch (err) {
                 addLog('Failed to start audio: ' + err.message, 'tracking');
+                showLoading(false);
             }
         }
 
