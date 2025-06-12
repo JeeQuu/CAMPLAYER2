@@ -555,8 +555,9 @@
         // Load all samples
         async function loadSamples() {
             try {
-                // GitHub raw URLs for direct file access
+                // GitHub raw URLs for direct file access with cache busting
                 const baseUrl = 'https://raw.githubusercontent.com/JeeQuu/CAMPLAYER2/main/samples';
+                const cacheBuster = Date.now(); // Force fresh download
                 const sampleFiles = [
                     'moog_bass_0105.mp3',
                     'moog_bass_0104.mp3', 
@@ -577,15 +578,20 @@
                     'diva_lead_dry_09.mp3'
                 ];
 
+                console.log(`Loading ${sampleFiles.length} samples with cache buster: ${cacheBuster}`);
+
                 // Load all samples into players object
                 for (const filename of sampleFiles) {
                     const sampleKey = filename.replace('.mp3', '').replace(/\s+/g, '_');
-                    const url = `${baseUrl}/${encodeURIComponent(filename)}`;
+                    const url = `${baseUrl}/${encodeURIComponent(filename)}?v=${cacheBuster}`;
+                    console.log(`Loading sample: ${sampleKey} from ${url}`);
+                    
                     players[sampleKey] = new Tone.Player(url).toDestination();
                     await players[sampleKey].load();
                     addLog(`Loaded: ${sampleKey}`, 'loading');
                 }
 
+                console.log('All samples loaded successfully!');
                 addLog('All samples loaded successfully!', 'loading');
             } catch (err) {
                 console.error('Error loading samples:', err);
