@@ -542,7 +542,7 @@
                 }
                 
                 // GitHub raw URLs for direct file access with cache busting
-                const baseUrl = 'https://raw.githubusercontent.com/JeeQuu/CAMPLAYER2/main/samples';
+                const baseUrl = 'https://raw.githubusercontent.com/jonasquantmusicab/CAMPLAYER2/main/samples';
                 const cacheBuster = Date.now(); // Force fresh download
                 const sampleFiles = [
                     'moog_bass_0105.mp3',
@@ -592,10 +592,8 @@
 
                 // Load all samples into players object
                 for (const filename of sampleFiles) {
-                    const sampleKey = filename.replace('.mp3', '').replace(/\s+/g, '_');
-                    // Fix URL encoding - don't double encode
-                    const encodedFilename = filename.replace(/\s+/g, '%20');
-                    const url = `${baseUrl}/${encodedFilename}?v=${cacheBuster}`;
+                    const sampleKey = filename.replace('.mp3', '');
+                    const url = `${baseUrl}/${filename}?v=${cacheBuster}`;
                     console.log(`Loading sample: ${sampleKey} from ${url}`);
                     
                     try {
@@ -624,7 +622,7 @@
                         
                         // Connect: Player -> Envelope -> Destination
                         player.connect(envelope);
-                        envelope.toDestination();
+                        envelope.connect(zoneVolume);
                         
                         // Store both player and envelope for control
                         players[sampleKey] = {
