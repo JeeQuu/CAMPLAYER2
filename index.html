@@ -561,8 +561,7 @@
                     'diva_lead_dry_04.mp3',
                     'diva_lead_dry_05.mp3',
                     'diva_lead_dry_08.mp3',
-                    'diva_lead_dry_09.mp3',
-                    'MUSIC_BACKING 12jun.mp3'
+                    'diva_lead_dry_09.mp3'
                 ];
 
                 console.log(`Loading ${sampleFiles.length} samples with cache buster: ${cacheBuster}`);
@@ -570,7 +569,9 @@
                 // Load all samples into players object
                 for (const filename of sampleFiles) {
                     const sampleKey = filename.replace('.mp3', '').replace(/\s+/g, '_');
-                    const url = `${baseUrl}/${encodeURIComponent(filename)}?v=${cacheBuster}`;
+                    // Fix URL encoding - don't double encode
+                    const encodedFilename = filename.replace(/\s+/g, '%20');
+                    const url = `${baseUrl}/${encodedFilename}?v=${cacheBuster}`;
                     console.log(`Loading sample: ${sampleKey} from ${url}`);
                     
                     try {
@@ -579,6 +580,10 @@
                             url: url,
                             onload: () => {
                                 console.log(`Player loaded successfully: ${sampleKey}`);
+                                // Mark as loaded when onload fires
+                                if (players[sampleKey]) {
+                                    players[sampleKey].loaded = true;
+                                }
                             },
                             onerror: (error) => {
                                 console.error(`Player load error for ${sampleKey}:`, error);
@@ -601,13 +606,11 @@
                         players[sampleKey] = {
                             player: player,
                             envelope: envelope,
-                            load: () => player.load(),
-                            loaded: false
+                            loaded: false // Will be set to true in onload
                         };
                         
                         // Wait for the player to load
                         await player.load();
-                        players[sampleKey].loaded = true;
                         console.log(`Successfully loaded: ${sampleKey}`);
                         addLog(`Loaded: ${sampleKey}`, 'loading');
                     } catch (sampleErr) {
@@ -617,7 +620,7 @@
                     }
                 }
 
-                const loadedCount = Object.keys(players).filter(key => players[key].loaded).length;
+                const loadedCount = Object.keys(players).filter(key => players[key] && players[key].loaded).length;
                 console.log(`Sample loading complete. Loaded ${loadedCount} out of ${sampleFiles.length} samples.`);
                 addLog(`Sample loading complete: ${loadedCount}/${sampleFiles.length} loaded`, 'loading');
                 
@@ -772,11 +775,18 @@
             const cameraGrid = document.querySelector('.camera-screen[data-camera="' + cameraIdx + '"]');
             
             // Get available loaded samples
-            const loadedSamples = Object.keys(players).filter(key => players[key].loaded);
+            const loadedSamples = Object.keys(players).filter(key => players[key] && players[key].loaded);
             console.log('Available loaded samples:', loadedSamples); // Debug log
             
             // Default sample selection
-            let sampleKey = loadedSamples[Math.floor(Math.random() * loadedSamples.length)];
+            let sampleKey;
+            if (loadedSamples.length > 0) {
+                sampleKey = loadedSamples[Math.floor(Math.random() * loadedSamples.length)];
+            } else {
+                // Fallback if no samples loaded yet
+                sampleKey = 'loading...';
+                console.log('No samples loaded yet, using placeholder');
+            }
             
             let zoneId = Date.now(); // Unique ID for each zone
             
@@ -1046,6 +1056,10 @@
             if (!zone || zone.classList.contains('disabled') || activeZones.has(zone)) return;
             
             const sample = zone.dataset.sample;
+            
+            // Skip if placeholder or no sample
+            if (!sample || sample === 'loading...') return;
+            
             const playerObj = players[sample];
             
             console.log(`Triggering zone - sample: ${sample}, player exists: ${!!playerObj}, players keys:`, Object.keys(players)); // Debug log
@@ -1076,6 +1090,10 @@
             if (!activeZones.has(zone)) return;
             
             const sample = zone.dataset.sample;
+            
+            // Skip if placeholder or no sample
+            if (!sample || sample === 'loading...') return;
+            
             const playerObj = players[sample];
             
             activeZones.delete(zone);
@@ -1261,7 +1279,7 @@
             modal.appendChild(title);
             
             // Get available samples from loaded players
-            const availableSamples = Object.keys(players).filter(key => players[key].loaded);
+            const availableSamples = Object.keys(players).filter(key => players[key] && players[key].loaded);
             
             availableSamples.forEach(sampleKey => {
                 const button = document.createElement('button');
